@@ -308,6 +308,13 @@ write.xlsx(EnrichmentAdults_CTRL,"KEGG_enrichment_AdultCTRL.xlsx")
 ggsave("comments papper/EnrichmentAdultsControl.png",EnrichmentAdultsCTRL, width = 11, height = 12, dpi = 300)
 
 
+all_picrust <- ggarrange(EnrichmentDownchildren,EnrichmentchildCTRL,
+                         EnrichmentAdultsSD,EnrichmentAdultsCTRL,
+                         ncol = 2,nrow = 2,labels = c("A","B","C","D"))
+all_picrust
+
+ggsave("comments papper/Enrichment_Allgroups.png",all_picrust, width = 16, height = 14, dpi = 300)
+
 ################################################################################################
 #
 #                    IDENTIFICATION OF UNIQUE KEGG PATHWAYS CHILDREN

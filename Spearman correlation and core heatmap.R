@@ -1,5 +1,4 @@
 
-
 sample_data(dataSilva)<-sample_data(dataSilva) %>% 
   data.frame() %>% 
   mutate(Groups =str_c(sample_type, life, sep = "/"))
@@ -69,7 +68,7 @@ print(spearman_test)
 (Fusi_nofilter<-ggplot(AbuGenus_all, aes(x = Abundance, y = Glucose)) +
   geom_point() +
   geom_smooth(method = "lm", se = TRUE, color = "blue") +
-  stat_cor(method = "spearman", label.x = 4, label.y = max(AbuGenus_filtrado$Glucose)*1) +
+  stat_cor(method = "spearman", label.x = 1, label.y = max(AbuGenus_all$Glucose)*1) +
   labs(title = "Spearman correlation: Fusicatenibacter/Glucose",
        x = "Fusicatenibacter abundance",
        y = "Glucose") +
@@ -80,7 +79,7 @@ ggsave("nueva data/SpearmanGlucose_fusicatenibacter.png", Fusi_nofilter,height =
 (Fusi_filter<-ggplot(AbuGenus_filtrado, aes(x = Abundance, y = Glucose)) +
     geom_point() +
     geom_smooth(method = "lm", se = TRUE, color = "blue") +
-    stat_cor(method = "spearman", label.x = 4, label.y = max(AbuGenus_filtrado$Glucose)*1) +
+    stat_cor(method = "spearman", label.x = 1, label.y = max(AbuGenus_filtrado$Glucose)*1.1) +
     labs(title = "Spearman correlation: Fusicatenibacter/Glucose",
          x = "Fusicatenibacter abundance",
          y = "Glucose") +
@@ -89,19 +88,10 @@ ggsave("nueva data/SpearmanGlucose_fusicatenibacter.png", Fusi_nofilter,height =
 ggsave("nueva data/SpearmanGlucose_fusicatenibacter_filter.png", Fusi_filter,height = 7,width = 7,dpi = 300)
 
 
+fusi_cor<- ggarrange(Fusi_nofilter,Fusi_filter,
+                     ncol = 2,nrow = 1,labels = c("A","B"))
 
-
-library(coin)
-zeros_idx <- factor(AbuGenus_all$Abundance == 0, labels = c("non_zero", "zero"))
-table(zeros_idx)
-
-perm_p <- independence_test(Abundance ~ Glucose | zeros_idx, 
-                            data = AbuGenus_all, 
-                            distribution = approximate(nresample = 1000),
-                            teststat = "quad")
-print(perm_p)
-
-
+ggsave("nueva data/SpearmanCor_Glucose_children.png", fusi_cor,height = 5,width = 10,dpi = 300)
 ###########################################################################################
 #                                                                                         #
 #               Spearman correlation with BH Down syndrome - Adolescents-Adults           #
@@ -122,18 +112,15 @@ rownames(otu_adultSD) <- tax_adultSD$Genus
 scaledownadult <- sample_data(AdultsSD)%>% 
   data.frame()
 
+
 scaledownadult <- scaledownadult %>% 
-  select(IMC,Colesterol_total, Triglicéridos, C_HDL,
-         C_VLDL, C_LDL, Glucosa) %>%
+  select(BMI,Total_Cholesterol, Triglicerydes,HDL.c,
+         VLDL.c, LDL.c, Glucose) %>%
   dplyr::rename(
-    `BMI` = IMC,
-    `Total Cholesterol` = Colesterol_total,
-    Triglycerides = Triglicéridos,
-    `HDL-c` =  C_HDL,
-    `VLDL-c`=C_VLDL,
-    `LDL-c` = C_LDL,
-    Glucose = Glucosa
-  ) %>%
+    `Total_Cholesterol` = Total_Cholesterol,
+    `HDL-c` =  HDL.c,
+    `VLDL-c`= VLDL.c,
+    `LDL-c` = LDL.c) %>%
   scale()
 
 #Correlación spearman
@@ -141,6 +128,57 @@ correlationstableDownadult <- associate(t(otu_adultSD), scaledownadult, method =
                                p.adj.threshold = 0.05, p.adj.method = "BH", n.signif = 0)
 
 write.xlsx(correlationstableDownadult,"Spearman_correlation_DownAdults.xlsx")
+
+grupos_interes <- c("Control/Children", "Control/Adolescents-Adults",
+                    "Down syndrome/Children", "Down syndrome/Adolescents-Adults")
+
+rel.abu_adults <- transform_sample_counts(data_Adults_filter, function(x) x/sum(x) * 100)
+
+Abundancia_Genus_adults <- classic_taxa(rel.abu_adults, Genus, Groups)
+
+AbuGenus_adults <- Abundancia_Genus_adults %>%
+  filter(Groups %in% grupos_interes) %>%
+  dplyr::select(Sample, Genus, mean, Abundance, Groups,Glucose)
+
+Abu_adults <- AbuGenus_adults %>%
+  dplyr::filter(Groups == "Down syndrome/Adolescents-Adults", Genus == "Bacteroides") %>%
+  dplyr::select(Sample,Genus, mean, Abundance, Groups,Glucose)
+
+Abu_genus_filter_adults <- Abu_adults %>%
+  dplyr::filter(Abundance > 0)
+
+spearman_test <- cor.test(Abu_adults$Abundance, Abu_adults$Glucose, method = "spearman")
+print(spearman_test)
+
+(Bacteroides_nofilter<-ggplot(Abu_adults, aes(x = Abundance, y = Glucose)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = TRUE, color = "blue") +
+    stat_cor(method = "spearman", label.x = 4, label.y = max(Abu_adults$Glucose)*1) +
+    labs(title = "Spearman correlation: Bacteroides/Glucose",
+         x = "Bacteroides abundance",
+         y = "Glucose") +
+    theme_bw())
+
+ggsave("nueva data/SpearmanGlucose_Bacteroides_nofilter.png", Bacteroides_nofilter,height = 7,width = 7,dpi = 300)
+
+(Bacteroides_filter<-ggplot(Abu_genus_filter_adults, aes(x = Abundance, y = Glucose)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = TRUE, color = "blue") +
+    stat_cor(method = "spearman", label.x = 4, label.y = max(Abu_genus_filter_adults$Glucose)*1) +
+    labs(title = "Spearman correlation: Bacteroides/Glucose",
+         x = "Bacteroides abundance",
+         y = "Glucose") +
+    theme_bw())
+
+ggsave("nueva data/SpearmanGlucose_fusicatenibacter_filter.png", Fusi_filter,height = 7,width = 7,dpi = 300)
+
+
+bactero_cor<- ggarrange(Bacteroides_nofilter,Bacteroides_filter,
+                     ncol = 2,nrow = 1,labels = c("C","D"))
+bactero_cor
+
+ggsave("nueva data/SpearmanCor_GlucoseAdults_Bacteroides.png", bactero_cor,height = 5,width = 10,dpi = 300)
+
 
 
 ###########################################################################################
@@ -313,3 +351,10 @@ coreheatmapaper <- as.ggplot(coreabundance)
 
 ggsave("nueva data/coreheatmap.png", coreheatmapaper, width = 10, height = 8, dpi = 300)
 
+
+genus_core <- ggarrange(G.Abu.Genus, coreheatmapaper,
+                        ncol = 2,nrow = 1,
+                        labels = c("A","B"))
+
+genus_core
+ggsave("nueva data/genus_coreheatmap.png", genus_core, width = 21, height = 10, dpi = 300)
